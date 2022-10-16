@@ -1,0 +1,16 @@
+'''
+A set of restricted packages and variables
+'''
+
+env = [
+     'DB_HOST', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB', 'DB_PORT', 'DB_URL',
+     'MLFLOW_HOST', 'MLFLOW_TRACKING_URI', 'MLFLOW_CONDA_HOME', 'ARTIFACT_DIR_NAME',
+     'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY',
+     'SECRET_KEY', 'ALGORITHM', 'ACCESS_TOKEN_EXPIRATION',
+     'API_SERVER', 'API_SERVER_PORT',
+     'UPLOAD_SERVER', 'UPLOAD_SERVER_PORT',
+     'PREDICTION_SERVER', 'PREDICTION_SERVER_PORT',
+     'EMAIL_ADDRESS', 'EMAIL_PASSWORD', 'EMAIL_SMTP_HOST', 'EMAIL_SMTP_PORT', 'CLIENT_URL'
+ ]
+
+packages = ['mlflow', 'boto3', 'psycopg2', 'sqlalchemy', 'dotenv']

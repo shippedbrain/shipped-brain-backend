@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+    db:
+      image: postgres:latest
+      restart: always
+      container_name: shipped-brain-db
+      env_file:
+        - .env
+      ports:
+        - 5432:5432
+      volumes:
+        - /var/lib/postgres-data:/var/lib/postgresql/data
+        #- ./resources/sql/tables.sql:/docker-entrypoint-initdb.d/init.sql
+    mlflow_server:
+      build: ./api/
+      restart: always
+      container_name: mlflow-server
+      depends_on: 
+        - db
+      env_file:
+        - .env
+      ports:
+        - 5000:5000
+      volumes:
+        - ${CONDA_ENVS_PATH_VOL}:/opt/conda/envs:rw
+        - .env:/app/.env:ro
+      command: mlflow server --host 0.0.0.0 --backend-store-uri ${DB_URL} --default-artifact-root s3://${ARTIFACT_DIR_NAME}/ --workers ${MLFLOW_SERVER_WORKERS}
+    api_server:
+      build: ./api/
+      restart: always
+      container_name: shipped-brain-server
+      depends_on: 
+        - db
+        - mlflow_server
+      env_file:
+        - .env
+      ports:
+        - ${API_SERVER_PORT}:${API_SERVER_PORT}
+      volumes:
+        - ${CONDA_ENVS_PATH_VOL}:/opt/conda/envs:rw
+        - .env:/app/.env:ro
+        - ./api/src:/app
+        - ./resources/data:/data:rw
+      command: gunicorn -k uvicorn.workers.UvicornWorker -b 0.0.0.0:${API_SERVER_PORT} -w ${API_SERVER_WORKERS} main:app --reload
+    prediction_server:
+      build: ./api/
+      restart: always
+      container_name: shipped-brain-prediction-server
+      depends_on:
+        - db
+        - mlflow_server
+      env_file:
+        - .env
+      ports:
+        - ${PREDICTION_SERVER_PORT}:${PREDICTION_SERVER_PORT}
+      volumes:
+        - ${CONDA_ENVS_PATH_VOL}:/opt/conda/envs:rw
+        - .env:/app/.env:ro
+      command: gunicorn -k uvicorn.workers.UvicornWorker -b 0.0.0.0:${PREDICTION_SERVER_PORT} -w ${PREDICTION_SERVER_WORKERS} prediction_server:app
+    upload_server:
+      build: ./api/
+      restart: always
+      container_name: shipped-brain-upload-server
+      depends_on:
+        - db
+        - mlflow_server
+      env_file:
+        - .env
+      ports:
+        - ${UPLOAD_SERVER_PORT}:${UPLOAD_SERVER_PORT}
+      volumes:
+        - ${CONDA_ENVS_PATH_VOL}:/opt/conda/envs:rw
+        - .env:/app/.env:ro
+      command: gunicorn -k uvicorn.workers.UvicornWorker -b 0.0.0.0:${UPLOAD_SERVER_PORT} -w ${UPLOAD_SERVER_WORKERS} model_upload_server:app
+#    frontend:
+#      image: nginx:latest
+#      container_name: shipped-brain-ui
+#      volumes:
+#        - ./app/dist/shipped-brain:/usr/share/nginx/html
+#        - ./app/nginx.conf:/etc/nginx/conf.d/default.conf
+#      ports:
+#        - 80:80
+#      depends_on:
+#        - api_server
+#        - mlflow_server
